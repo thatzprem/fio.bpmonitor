@@ -8,7 +8,10 @@ const axiosInstance = axios.create({
 });
 
 // Queries db for proposals
-export async function getProposalQuery(limit?: number, chain: string = 'Mainnet') {
+export async function getProposalQuery(
+    limit?: number,
+    chain: string = 'Mainnet'
+) {
     try {
         const whereClause = { chain };
 

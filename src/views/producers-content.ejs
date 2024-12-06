@@ -1,0 +1,159 @@
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">FIO Chain <%= chain %> Block Producers</h1>
+    <div class="space-y-4">
+        <% producers.forEach((producer, index) => { %>
+            <div x-data="{ showScore: false, showNodes: false }" class="bg-white shadow-md rounded-lg p-4">
+                <div class="entity-entry">
+                    <div class="logo-number-container">
+                        <div class="numbered-circle">
+                            <%= index + 1 %>
+                        </div>
+                        <div class="logo-flag-container">
+                            <div class="logo-container">
+                                <% if (producer.branding && producer.branding.logo_256) { %>
+                                    <img src="<%= producer.branding.logo_256 %>" alt="<%= producer.candidate_name %> logo" class="entity-logo">
+                                <% } else { %>
+                                    <div class="entity-logo-placeholder"></div>
+                                <% } %>
+                            </div>
+                            <% if (producer.flagIconUrl) { %>
+                                <div class="flag-container">
+                                    <img src="<%= producer.flagIconUrl %>" alt="<%= producer.location_country %> flag" class="h-full">
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h2 class="text-xl font-semibold"><%= producer.candidate_name %></h2>
+                        <p class="text-gray-600"><%= producer.owner %></p>
+                        <% if (producer.fio_address_valid) { %>
+                            <p class="text-gray-600"><%= producer.fio_address %></p>
+                        <% } else { %>
+                            <p class="text-red-600">
+                                <%= producer.fio_address %> - this handle does not exist, voting for this BP is not possible!
+                            </p>
+                        <% } %>
+                        <p class="text-blue-600 font-semibold"><%= producer.total_votes.toLocaleString() %></p>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold mb-2"><%= producer.score.grade %> (<%= producer.score.score %>/<%= producer.score.max_score %>)</span>
+                        <div>
+                            <button @click="showNodes = !showNodes" class="bg-green-500 text-white px-4 py-2 rounded">Nodes</button>
+                            <button @click="showScore = !showScore" class="bg-blue-500 text-white px-4 py-2 rounded ml-2">Score</button>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="showScore" class="mt-4">
+                    <table class="w-full">
+                        <thead>
+                        <tr>
+                            <th class="text-left">Metric</th>
+                            <th class="text-left">Status</th>
+                            <th class="text-left">Score</th>
+                            <th class="text-left">Description</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <%
+                        if (typeof producerScoringCriteria !== 'undefined' && producer.score && producer.score.details) {
+                        Object.keys(producerScoringCriteria).forEach(key => {
+                            const value = producer.score.details[key];
+                        if (value !== undefined) {
+                            const maxScore = producerScoringCriteria[key];
+                        %>
+                        <tr>
+                            <td><%= key %></td>
+                            <td>
+                                <% if (value.status) { %>
+                                    <span class="text-green-500">✓</span>
+                                <% } else { %>
+                                    <span class="text-red-500">✕</span>
+                                <% } %>
+                            </td>
+                            <td><%= value.score %>/<%= maxScore %></td>
+                            <td class="score-description"><%- (typeof scoreDescriptions !== 'undefined' && scoreDescriptions[key]) ? scoreDescriptions[key] : 'No description available' %></td>
+                        </tr>
+                        <%
+                        }
+                        });
+                        } else {
+                        %>
+                            <tr>
+                                <td colspan="4" class="text-center text-red-500">Scoring criteria not available</td>
+                            </tr>
+                        <% } %>
+                        </tbody>
+                    </table>
+                </div>
+                <div x-show="showNodes" class="mt-4">
+                    <table class="w-full">
+                        <thead>
+                        <tr>
+                            <th class="text-left">Type</th>
+                            <th class="text-left">URL</th>
+                            <th class="text-left">Status</th>
+                            <th class="text-left">Version</th>
+                            <th class="text-left">Grade</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <% const nodeOrder = ['producer', 'seed', 'full', 'query'];
+                        nodeOrder.forEach(nodeType => {
+                        if (producer.nodes[nodeType]) {
+                        producer.nodes[nodeType].forEach(node => { %>
+                            <tr>
+                                <td><%= nodeType %></td>
+                                <td><%= node.url %></td>
+                                <td><%= node.status %></td>
+                                <td><%= node.server_version %></td>
+                                <td>
+                                    <% if (node.score && typeof node.score === 'object' && 'grade' in node.score) { %>
+                                        <%= node.score.grade %> (<%= node.score.score %>/<%= node.score.max_score %>)
+                                        <button @click="$refs.nodeScore<%= node.id %>.style.display = $refs.nodeScore<%= node.id %>.style.display === 'none' ? 'table-row' : 'none'" class="ml-2 text-blue-500 underline">SCORE</button>
+                                    <% } else { %>
+                                        N/A
+                                    <% } %>
+                                </td>
+                            </tr>
+                            <% if (node.score && typeof node.score === 'object' && 'details' in node.score) { %>
+                                <tr x-ref="nodeScore<%= node.id %>" style="display: none;">
+                                    <td colspan="5">
+                                        <table class="w-full bg-gray-100">
+                                            <thead>
+                                            <tr>
+                                                <th class="text-left">Metric</th>
+                                                <th class="text-left">Status</th>
+                                                <th class="text-left">Score</th>
+                                                <th class="text-left">Description</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <% Object.entries(node.score.details).forEach(([key, value]) => { %>
+                                                <tr>
+                                                    <td><%= key %></td>
+                                                    <td>
+                                                        <% if (value.status) { %>
+                                                            <span class="text-green-500">✓</span>
+                                                        <% } else { %>
+                                                            <span class="text-red-500">✕</span>
+                                                        <% } %>
+                                                    </td>
+                                                    <td><%= value.score %>/<%= nodeScoringCriteria[key] || 'N/A' %></td>
+                                                    <td class="score-description"><%- (typeof scoreDescriptions !== 'undefined' && scoreDescriptions[key]) ? scoreDescriptions[key] : 'No description available' %></td>
+                                                </tr>
+                                            <% }); %>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            <% } %>
+                        <% });
+                        }
+                        }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>

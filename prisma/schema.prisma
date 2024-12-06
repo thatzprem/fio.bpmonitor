@@ -13,6 +13,7 @@ model producer {
   chain_table_id      Int
   owner               String
   fio_address         String
+  fio_address_valid   Boolean                @default(true)
   addresshash         String
   total_votes         BigInt
   producer_public_key String
@@ -33,6 +34,9 @@ model producer {
   tools               producerTools[]
 
   @@unique([chain, chain_table_id])
+  @@index([owner])
+  @@index([chain, status])
+  @@index([total_votes])
 }
 
 model producerExtendedData {
@@ -58,6 +62,7 @@ model producerBranding {
   producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
 
   @@unique([producerId, type])
+  @@index([producerId])
 }
 
 model producerSocials {
@@ -68,6 +73,7 @@ model producerSocials {
   producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
 
   @@unique([producerId, type])
+  @@index([producerId])
 }
 
 model producerNodes {
@@ -88,6 +94,11 @@ model producerNodes {
   producer           producer        @relation(fields: [producerId], references: [id], onDelete: Cascade)
   apiNodeChecks      apiNodeCheck[]
   apiFetchChecks     apiFetchCheck[]
+  nodeScores         nodeScores[]
+
+  @@index([producerId, status])
+  @@index([chain, type, status])
+  @@index([type, url, id])
 }
 
 model apiNodeCheck {
@@ -98,6 +109,8 @@ model apiNodeCheck {
   head_block_time DateTime?
   status          Int
   producerNode    producerNodes @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, time_stamp])
 }
 
 model apiFetchCheck {
@@ -106,6 +119,8 @@ model apiFetchCheck {
   nodeId       Int
   results      Int
   producerNode producerNodes @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, time_stamp])
 }
 
 model producerFeeMultiplier {
@@ -114,6 +129,8 @@ model producerFeeMultiplier {
   multiplier Float
   last_vote  DateTime
   producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
+
+  @@index([last_vote])
 }
 
 model producerFeeVotes {
@@ -125,6 +142,7 @@ model producerFeeVotes {
   producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
 
   @@unique([producerId, end_point])
+  @@index([producerId])
 }
 
 model producerBundleVotes {
@@ -147,17 +165,36 @@ model proposals {
   received      Json
 
   @@unique([proposal_name, block_num])
+  @@index([chain, time_stamp])
 }
 
 model producerScores {
-  id         Int      @id @default(autoincrement())
-  time_stamp DateTime @default(now())
-  producerId Int
+  id          Int      @id @default(autoincrement())
+  time_stamp  DateTime @default(now())
+  producerId  Int
+  details     Json
+  score       Int
+  max_score   Int
+  grade       String
+  score_ratio Float
+  producer    producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
+
+  @@index([producerId, time_stamp])
+  @@index([score_ratio])
+}
+
+model nodeScores {
+  id         Int           @id @default(autoincrement())
+  time_stamp DateTime      @default(now())
+  nodeId     Int
   details    Json
   score      Int
   max_score  Int
   grade      String
-  producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
+  node       producerNodes @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([time_stamp])
+  @@index([nodeId, time_stamp])
 }
 
 model producerTools {
@@ -168,6 +205,7 @@ model producerTools {
   producer   producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
 
   @@unique([producerId, toolName])
+  @@index([producerId])
 }
 
 model ProducerChainMap {
@@ -176,4 +214,6 @@ model ProducerChainMap {
   testnetProducer String
 
   @@unique([mainnetProducer, testnetProducer])
+  @@index([mainnetProducer])
+  @@index([testnetProducer])
 }

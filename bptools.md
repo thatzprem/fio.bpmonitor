@@ -16,6 +16,11 @@
 |Mainnet|blockp43pubs|FIO Fee Microservice|https://fio-stats.blockpane.com/v1/docs|
 |Mainnet|blockp43pubs|Chain Snapshots|https://snap.blockpane.com/chains/fio/|
 |Testnet|yxeiw3p53dns|Chain Snapshots|https://snap.blockpane.com/chains/fio/|
+|Mainnet|cjk2eoa5a4bg|Chain Snapshots|https://snapshots.genereos.io/#fio/|
+|Testnet|bsbdk2lectan|Chain Snapshots|https://snapshots.genereos.io/#fio-testnet/|
+|Mainnet|mak1ed5b4k1v|Chain Snapshots|http://snapshots.eosusa.io/snapshots/fio/|
+|Testnet|41ksaga2vybn|Chain Snapshots|http://snapshots.eosusa.io/snapshots/fiotestnet/|
+|Mainnet|wrcjejslfplp|Chain Snapshots|https://snapshots.eosphere.io/|
 |Mainnet|mak1ed5b4k1v|Wrapping Oracle|https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/544014340/Custodians+and+Oracles|
 |Mainnet|jnmwi5vu3hle|Wrapping Oracle|https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/544014340/Custodians+and+Oracles|
 |Mainnet|hkzfdcxe11us|Wrapping Oracle|https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/544014340/Custodians+and+Oracles|
@@ -24,3 +29,4 @@
 |Testnet|gws1hlwlqhq1|Wrapping Oracle|https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/544014340/Custodians+and+Oracles|
 |Mainnet|nssppfxg2xue|Hyperion Node|Social Marketing| 
 |Mainnet|gx5o44uyzscl|Video Tutorials|https://www.youtube.com/@BPKiwi|
+|Mainnet|ymtwytro3ir5|Nodestatus|https://nodestatus.ledgerwise.io/fio|

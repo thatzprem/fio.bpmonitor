@@ -2,8 +2,8 @@
 
 set -e
 
-# Check if the -clean parameter is passed
-if [ "$1" == "-clean" ]; then
+# Check if the clean parameter is passed
+if [ "$1" = "clean" ]; then
   echo "Cleaning the database..."
   # Empty the database by running the Prisma migrate reset command
   npx prisma migrate reset --force --skip-generate --skip-seed

@@ -1,0 +1,75 @@
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">FIO Chain <%= chain %> Nodes</h1>
+    <div class="space-y-4">
+        <% nodes.forEach((node, index) => { %>
+            <div x-data="{ showScore: false }" class="bg-white shadow-md rounded-lg p-4">
+                <div class="entity-entry">
+                    <div class="logo-number-container">
+                        <div class="numbered-circle">
+                            <%= index + 1 %>
+                        </div>
+                        <div class="logo-flag-container">
+                            <div class="logo-container">
+                                <% if (node.branding && node.branding.logo_256) { %>
+                                    <img src="<%= node.branding.logo_256 %>" alt="<%= node.candidate_name %> logo" class="entity-logo">
+                                <% } else { %>
+                                    <div class="entity-logo-placeholder"></div>
+                                <% } %>
+                            </div>
+                            <% if (node.flagIconUrl) { %>
+                                <div class="flag-container">
+                                    <img src="<%= node.flagIconUrl %>" alt="<%= node.location_country %> flag" class="h-full">
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h2 class="text-xl font-semibold"><%= node.candidate_name %></h2>
+                        <p class="text-gray-600"><%= node.url %></p>
+                        <p class="text-blue-600 font-semibold"><%= node.type %> - <%= node.server_version %></p>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <% if (node.score) { %>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold mb-2"><%= node.score.grade %> (<%= node.score.score %>/<%= node.score.max_score %>)</span>
+                        <% } %>
+                        <div>
+                            <button @click="showScore = !showScore" class="bg-blue-500 text-white px-4 py-2 rounded ml-2">Score</button>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="showScore" class="mt-4">
+                    <% if (node.score && node.score.details) { %>
+                        <table class="w-full">
+                            <thead>
+                            <tr>
+                                <th class="text-left">Metric</th>
+                                <th class="text-left">Status</th>
+                                <th class="text-left">Score</th>
+                                <th class="text-left">Description</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <% Object.entries(node.score.details).forEach(([key, value]) => { %>
+                                <tr>
+                                    <td><%= key %></td>
+                                    <td>
+                                        <% if (value.status) { %>
+                                            <span class="text-green-500">✓</span>
+                                        <% } else { %>
+                                            <span class="text-red-500">✕</span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= value.score %>/<%= nodeScoringCriteria[key] || 'N/A' %></td>
+                                    <td class="score-description"><%- (typeof scoreDescriptions !== 'undefined' && scoreDescriptions[key]) ? scoreDescriptions[key] : 'No description available' %></td>
+                                </tr>
+                            <% }); %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p>No score details available for this node.</p>
+                    <% } %>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>

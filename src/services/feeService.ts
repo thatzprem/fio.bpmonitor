@@ -4,7 +4,10 @@ import { logger_log, logger_error } from '../utils/logger';
 import axios from 'axios';
 
 // Queries db for producers' fee votes
-export async function getFeesQuery(chainValue: 'mainnet' | 'testnet' = 'mainnet', type: 'by_producer' | 'by_fee' = 'by_fee') {
+export async function getFeesQuery(
+    chainValue: 'mainnet' | 'testnet' = 'mainnet',
+    type: 'by_producer' | 'by_fee' = 'by_fee'
+) {
     const chain = chainValue === 'mainnet' ? 'Mainnet' : 'Testnet';
 
     const producers = await prisma.producer.findMany({

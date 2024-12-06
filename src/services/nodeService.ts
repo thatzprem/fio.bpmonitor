@@ -1,39 +1,111 @@
 import { prisma } from '../config/database';
+import { Prisma } from '@prisma/client';
 import { config } from '../config/env';
+import { getFullBaseUrl } from "../utils/helpers";
 import { logger_log } from '../utils/logger';
 import axios from 'axios';
 
 // Queries db for active node data
-export const getNodesQuery = async (chain: 'mainnet' | 'testnet' = 'mainnet', type: 'api' | 'seed' | 'producer' = 'api') => {
-    let whereClause: any = {
-        status: 'active',
-        chain: chain === 'mainnet' ? 'Mainnet' : 'Testnet'
-    };
+export const getNodesQuery = async (
+    chain: 'mainnet' | 'testnet' = 'mainnet',
+    type: 'api' | 'seed' | 'producer' = 'api'
+) => {
+    const chainValue = chain === 'mainnet' ? 'Mainnet' : 'Testnet';
+    let typeCondition = '';
+    let orderByClause = Prisma.sql`ORDER BY n.id`;
 
     switch (type) {
         case 'api':
-            whereClause.type = { in: ['full', 'query'] };
+            typeCondition = 'AND n.api = true';
+            orderByClause = Prisma.sql`ORDER BY s.score DESC NULLS LAST, n.id`;
             break;
         case 'seed':
-            whereClause.type = 'seed';
-            break;
         case 'producer':
-            whereClause.type = 'producer';
+            typeCondition = `AND n.type = '${type}'`;
             break;
     }
 
-    return await prisma.producerNodes.findMany({
-        where: whereClause,
-    });
+    const nodes = await prisma.$queryRaw<any[]>(Prisma.sql`
+        WITH latest_scores AS (
+            SELECT
+                "nodeId",
+                time_stamp,
+                details,
+                score,
+                max_score,
+                grade,
+                ROW_NUMBER() OVER (PARTITION BY "nodeId" ORDER BY time_stamp DESC) as rn
+            FROM "nodeScores"
+        ),
+             unique_nodes AS (
+                 SELECT DISTINCT ON (n.type, n.url) n.*
+        FROM "producerNodes" n
+        WHERE n.status = 'active'
+          AND n.chain = ${chainValue}
+            ${Prisma.sql([typeCondition])}
+        ORDER BY n.type, n.url, n.id
+            )
+        SELECT
+            n.*,
+            p.owner,
+            p.total_votes,
+            pe.candidate_name,
+            pe.location_country,
+            s.details AS score_details,
+            s.score AS score_value,
+            s.max_score AS score_max_score,
+            s.grade AS score_grade,
+            (
+                SELECT json_agg(json_build_object('type', b.type, 'url', b.url))
+                FROM "producerBranding" b
+                WHERE b."producerId" = p.id
+            ) AS branding
+        FROM unique_nodes n
+                 LEFT JOIN producer p ON n."producerId" = p.id
+                 LEFT JOIN "producerExtendedData" pe ON p.id = pe."producerId"
+                 LEFT JOIN latest_scores s ON n.id = s."nodeId" AND s.rn = 1
+            ${orderByClause}
+    `);
+
+    return nodes.map(node => ({
+        id: node.id,
+        producerId: node.producerId,
+        owner: node.owner,
+        candidate_name: node.candidate_name,
+        chain: node.chain,
+        votes: node.total_votes ? Number(node.total_votes) : 0,
+        location_name: node.location_name,
+        location_country: node.location_country,
+        location_latitude: node.location_latitude,
+        location_longitude: node.location_longitude,
+        type: node.type,
+        url: node.url,
+        api: node.api,
+        historyV1: node.historyV1,
+        hyperion: node.hyperion,
+        server_version: node.server_version,
+        status: node.status,
+        score: node.score_value !== null && node.score_value !== undefined ? {
+            details: node.score_details,
+            score: node.score_value,
+            max_score: node.score_max_score,
+            grade: node.score_grade
+        } : null,
+        branding: (node.branding || []).reduce((acc: { [key: string]: string }, brand: any) => {
+            acc[brand.type] = brand.url;
+            return acc;
+        }, {}),
+        flagIconUrl: node.location_country
+            ? `${getFullBaseUrl()}/flags/${node.location_country.toLowerCase()}.svg`
+            : null
+    }));
 };
 
 // Checks nodes in producerNodes
 export const checkNode = async () => {
     const nodes = await prisma.producerNodes.findMany({
         where: {
-            type: {
-                in: ['query', 'full'],
-            },
+            api: true,
             status: { in: ['active', 'down', 'reported'] },
         },
     });
@@ -46,9 +118,32 @@ export const checkNode = async () => {
                 const data = response.data;
                 const serverVersion = data.server_version_string;
                 const chainId = data.chain_id;
+                const headBlockDate = new Date(data.head_block_time + 'Z');
+                const currentDate = new Date();
+                const headBlockTime = headBlockDate.getTime();
+                const currentTimeUTC = currentDate.getTime();
+                const timeDifference = Math.abs(currentTimeUTC - headBlockTime);
 
                 if (serverVersion) {
                     logger_log('NODES',`Node: ${node.id}: API node is running ${serverVersion}`);
+
+                    // Check if node is more than 15 seconds off
+                    if (timeDifference > 15000) {
+                        logger_log('NODES',`Node: ${node.id}: Node is ${timeDifference/1000} seconds off. Block time: ${headBlockDate.toISOString()}, Current time: ${currentDate.toISOString()}, Marking as down.`);
+                        await prisma.producerNodes.update({
+                            where: { id: node.id },
+                            data: { status: 'down' }
+                        });
+                        await prisma.apiNodeCheck.create({
+                            data: {
+                                nodeId: node.id,
+                                server_version: serverVersion,
+                                head_block_time: headBlockDate,
+                                status: 10010,
+                            },
+                        });
+                        continue;
+                    }
 
                     // Update server_version in ProducerNode
                     await prisma.producerNodes.update({
@@ -83,7 +178,7 @@ export const checkNode = async () => {
                         data: {
                             nodeId: node.id,
                             server_version: serverVersion,
-                            head_block_time: new Date(data.head_block_time),
+                            head_block_time: headBlockDate,
                             status: response.status,
                         },
                     });
@@ -115,27 +210,15 @@ export const checkNode = async () => {
             }
 
         } catch (error: any) {
-            if (error.response) {
-                // Server responded with a status other than 2xx
-                logger_log('NODES',`Node: ${node.id}: API node is not running.`);
-                await prisma.apiNodeCheck.create({
-                    data: {
-                        nodeId: node.id,
-                        server_version: '',
-                        status: error.response.status,
-                    },
-                });
-            } else {
-                // Unable to connect (timeout, DNS issues, etc.)
-                logger_log('NODES',`Node: ${node.id}: API node is not running.`);
-                await prisma.apiNodeCheck.create({
-                    data: {
-                        nodeId: node.id,
-                        server_version: '',
-                        status: 0,
-                    },
-                });
-            }
+            // Unable to connect or other issues (timeout, DNS issues, etc.)
+            logger_log('NODES',`Node: ${node.id}: API node is not running.`);
+            await prisma.apiNodeCheck.create({
+                data: {
+                    nodeId: node.id,
+                    server_version: '',
+                    status: 0,
+                },
+            });
             await updateNodeStatus(node.id);
         }
 
@@ -213,7 +296,7 @@ async function updateNodeStatus(nodeId: number) {
         take: 3
     });
 
-    if (recentChecks.length === 3 && recentChecks.every(check => !check.server_version)) {
+    if (recentChecks.length < 3 || recentChecks.every(check => !check.server_version)) {
         await prisma.producerNodes.update({
             where: { id: nodeId },
             data: { status: 'down' }

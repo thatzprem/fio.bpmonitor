@@ -4,11 +4,15 @@ import { logger_error } from '../utils/logger';
 
 export const getScores = async (req: Request, res: Response) => {
     try {
-        const { limit, chain } = req.query;
-        const limitNumber = limit ? parseInt(limit as string, 10) : undefined;
-        const chainValue = chain as 'mainnet' | 'testnet' | undefined;
+        const { producerId, limit } = req.query;
+        const producerIdNumber = producerId ? parseInt(producerId as string, 10) : undefined;
+        const limitNumber = limit ? parseInt(limit as string, 10) : 7;
 
-        const scores = await getScoresQuery(limitNumber, chainValue);
+        if (!producerIdNumber) {
+            return res.status(400).json({ error: 'producerId is required' });
+        }
+
+        const scores = await getScoresQuery(producerIdNumber, limitNumber);
         res.json(scores);
     } catch (error) {
         logger_error('SCORES', 'Error in getScores:', error);

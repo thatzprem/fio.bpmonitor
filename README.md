@@ -63,17 +63,18 @@ pm2 start dist/app.js --name bpmonitor
 
 ## Web
 ### Paths
-|Path|Description|
-|---|---|
-|/|Producers sorted by Score|
+|Path|Description|Params|
+|---|---|---|
+|/|Producers sorted by Score|chain:Testnet/Mainnet|
+|/nodes|Nodes sorted by Score|chain:Testnet/Mainnet, type:**api**/seed/producer|
 
 ## API
 ### Endpoints
-|Name|Endpoint|
-|---|---|
-|Get Producers|/api/producers|
-|Get Nodes|/api/nodes|
-|Get Fees|/api/fess|
-|Get Bundles|/api/bundles|
-|Get Proposals|/api/proposal|
-|Get Scores|/api/scores|
+|Name|Endpoint|Params|
+|---|---|---|
+|Get Producers|/api/producers|chain:testnet/mainnet, sortBy:**total_votes**/score|
+|Get Nodes|/api/nodes|chain:testnet/mainnet, type:**api**/seed/producer|
+|Get Fees|/api/fess|chain:testnet/mainnet, type:**by_fee**/by_producer|
+|Get Bundles|/api/bundles|chain:testnet/mainnet|
+|Get Proposals|/api/proposal|chain:testnet/mainnet|
+|Get Scores|/api/scores|producerId: number|
